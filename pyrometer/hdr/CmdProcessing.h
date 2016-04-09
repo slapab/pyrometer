@@ -44,10 +44,19 @@ protected:
 	// Command algorithm's function/method type
 	using AlgorithmType = void (CmdProcessing::*) ();
 
+	struct ProcessingTempaData
+	{
+		CmdType cmdType;
+		bool readingCMDData;
+	};
+
 	// PROTECTED METHODS:
 	//void execudeCmd();
 	void parseCmd();
-
+	// parts of parsing command - each method is parsing one specific command
+	void parseCmdOneRead();
+	void parseCmdMultipleRead();
+	void parseCmdSaveData();
 
 	// - all supported command algorithms:
 	void readOneTime();
@@ -55,6 +64,8 @@ protected:
 
 	// PROTECTED FIELDS:
 	UARTCMDInterface & m_uartDev;
+
+	ProcessingTempaData m_processingData;
 	AlgorithmType m_currentAlgorithm;
 
 	ReadTempType m_whichTempRead;
