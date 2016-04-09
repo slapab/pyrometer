@@ -31,11 +31,11 @@
 								<option id="gnu.cpp.compiler.option.include.paths.2045024017" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${GMOCK_LOC}/include/&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${GTEST_LOC}/include/&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pirometer/hdr/}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DFP_PACKAGES}/Keil/STM32F0xx_DFP/1.4.0/Device/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DFP_PACKAGES}/ARM/CMSIS/4.5.0/CMSIS/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DFP_PACKAGES}/ARM/CMSIS/4.5.0/Device/ARM/ARMCM0/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/UnitTests/mocks}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pyrometer/hdr/}&quot;"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.dialect.std.1134673889" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.dialect.flags.1699282959" name="Other dialect flags" superClass="gnu.cpp.compiler.option.dialect.flags" value="-std=c++14" valueType="string"/>
@@ -50,11 +50,11 @@
 								<option id="gnu.c.compiler.option.include.paths.477653124" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${GMOCK_LOC}/include/&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${GTEST_LOC}/include/&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pirometer/hdr/}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DFP_PACKAGES}/Keil/STM32F0xx_DFP/1.4.0/Device/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DFP_PACKAGES}/ARM/CMSIS/4.5.0/CMSIS/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DFP_PACKAGES}/ARM/CMSIS/4.5.0/Device/ARM/ARMCM0/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/UnitTests/mocks}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pyrometer/hdr/}&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.185218588" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="STM32F051"/>
@@ -79,11 +79,11 @@
 								<option id="gnu.both.asm.option.include.paths.2074769183" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${GMOCK_LOC}/include/&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${GTEST_LOC}/include/&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pirometer/hdr/}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DFP_PACKAGES}/Keil/STM32F0xx_DFP/1.4.0/Device/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DFP_PACKAGES}/ARM/CMSIS/4.5.0/CMSIS/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DFP_PACKAGES}/ARM/CMSIS/4.5.0/Device/ARM/ARMCM0/Include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/UnitTests/mocks}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/pyrometer/hdr/}&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.2128946390" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
@@ -208,5 +208,12 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
-	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Debug">
+			<resource resourceType="PROJECT" workspacePath="/UnitTests"/>
+		</configuration>
+		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/UnitTests"/>
+		</configuration>
+	</storageModule>
 </cproject>

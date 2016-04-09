@@ -28,7 +28,7 @@
 		<link>
 			<name>pirometer_src</name>
 			<type>2</type>
-			<locationURI>WORKSPACE_LOC/pirometer/src</locationURI>
+			<locationURI>WORKSPACE_LOC/pyrometer/src</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>
