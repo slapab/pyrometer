@@ -33,7 +33,8 @@ public:
 	using CmdProcessing::m_processingData;
 	using CmdProcessing::m_whichTempRead;
 	using CmdProcessing::m_currentAlgorithm;
-
+	using CmdProcessing::m_NSamples;
+	using CmdProcessing::m_MDelay;
 };
 
 
@@ -87,7 +88,7 @@ TEST_F(FixtureCmdProcessing, OneReadCommandAmbientTemp_ValidateCommandCheck)
 	EXPECT_FALSE(cmdProcessing.m_processingData.readingCMDData);
 }
 
-TEST_F(FixtureCmdProcessing, DISABLED_ContinousReadCommandAmbientTemp_ValidateCommandCheck)
+TEST_F(FixtureCmdProcessing, ContinousReadCommandAmbientTemp_ValidateCommandCheck)
 {
 	const uint8_t CMDType = static_cast<uint8_t>(CmdType::CMD_MULTIPLE);
 	const uint8_t TempRead = static_cast<uint8_t>(ReadTempType::READ_AMBIENT);
@@ -96,25 +97,43 @@ TEST_F(FixtureCmdProcessing, DISABLED_ContinousReadCommandAmbientTemp_ValidateCo
 	const uint8_t M_lowByte = 0xFF;
 	const uint8_t M_highByte = 0x00;
 
-	const uint8_t EndByte = '\n';
 
-	EXPECT_CALL(mockUartDev, read(_)).
-			Times(7).	// exactly 3-times should be called
-			WillOnce(DoAll(SetArgReferee<0>(CMDType), Return(true))).	//After first read return CMDType value
-			WillOnce(DoAll(SetArgReferee<0>(TempRead), Return(true))).	//After 2nd read return TempRead value
-			WillOnce(DoAll(SetArgReferee<0>(N_lowByte), Return(true))).	//After 3rd read return low byte of N
-			WillOnce(DoAll(SetArgReferee<0>(N_highByte), Return(true))).//After 4rd read return high byte of N
-			WillOnce(DoAll(SetArgReferee<0>(M_lowByte), Return(true))). //After 5rd read return low byte of M
-			WillOnce(DoAll(SetArgReferee<0>(M_highByte), Return(true))).//After 6rd read return high byte of M
-			WillOnce(DoAll(SetArgReferee<0>(EndByte), Return(true)))	//At the last return End Byte
+	EXPECT_CALL(mockUartDev, read(_))
+			.Times(6)
+			.WillOnce(DoAll(SetArgReferee<0>(CMDType), Return(true)))	//After first read return CMDType value
+			.WillOnce(DoAll(SetArgReferee<0>(TempRead), Return(true)))	//After 2nd read return TempRead value
+			.WillOnce(DoAll(SetArgReferee<0>(N_lowByte), Return(true)))	//After 3rd read return low byte of N
+			.WillOnce(DoAll(SetArgReferee<0>(N_highByte), Return(true)))//After 4rd read return high byte of N
+			.WillOnce(DoAll(SetArgReferee<0>(M_lowByte), Return(true))) //After 5rd read return low byte of M
+			.WillOnce(DoAll(SetArgReferee<0>(M_highByte), Return(true)))//After 6rd read return high byte of M
+			//WillOnce(DoAll(SetArgReferee<0>(EndByte), Return(true)))	//At the last return End Byte
 			//WillRepeatedly(Return(false))	// other calling should return false
 			;
 
+	// Read first time -> get the command type
+	cmdProcessing.parseCmd();
+	EXPECT_EQ(static_cast<CmdType>(CMDType), cmdProcessing.m_processingData.cmdType);
+	EXPECT_TRUE(cmdProcessing.m_processingData.readingCMDData);
+
+	// Call second time -> get the information which will temperature need to measure
+	cmdProcessing.parseCmd();
+	EXPECT_EQ(static_cast<ReadTempType>(TempRead), cmdProcessing.m_processingData.readType);
+	EXPECT_TRUE(cmdProcessing.m_processingData.readingCMDData);
+	EXPECT_EQ(1u, cmdProcessing.m_processingData.seq);
+
+	// Call four times to get command parameters
+	cmdProcessing.parseCmd();
+	cmdProcessing.parseCmd();
+	cmdProcessing.parseCmd();
 	cmdProcessing.parseCmd();
 
-	// Check internal state
+	// Check internal state after command parsing
+	EXPECT_EQ((N_highByte<<8) | N_lowByte, cmdProcessing.m_NSamples);
+	EXPECT_EQ((M_highByte<<8) | M_lowByte, cmdProcessing.m_MDelay);
+	EXPECT_EQ(static_cast<ReadTempType>(TempRead), cmdProcessing.m_whichTempRead);
+
+	// Check if algorithm was set properly
 	EXPECT_EQ(cmdProcessing.m_currentAlgorithm, &FTestCmdProcessing::readMultiple);
-	EXPECT_EQ(cmdProcessing.m_whichTempRead, static_cast<ReadTempType>(TempRead));
 }
 
 TEST_F(FixtureCmdProcessing, OneReadAlgorithm_AmbiendTempRequestWithResponse)

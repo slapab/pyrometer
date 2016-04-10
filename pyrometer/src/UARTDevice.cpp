@@ -8,7 +8,7 @@
 
 
 UARTDevice::UARTDevice()
-	: m_TxInProgress(false), m_CmdComplete(false)
+	: m_TxInProgress(false)
 {}
 
 UARTDevice & UARTDevice::get()
@@ -70,9 +70,9 @@ inline void UARTDevice::enable(const bool enable)
     }
 }
 
-inline bool UARTDevice::isCmdComplete()
+inline bool UARTDevice::isReadBufferEmpty()
 {
-	return m_CmdComplete;
+	return m_RcvBuff.isEmpty();
 }
 
 bool UARTDevice::send(const uint8_t data)

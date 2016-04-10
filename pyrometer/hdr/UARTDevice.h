@@ -41,11 +41,11 @@ public:
 
 	static UARTDevice & get();
 
-    inline void enable(const bool enable);
-    void init();
-    bool send(const uint8_t data);
-    bool read(uint8_t & ref);
-    inline bool isCmdComplete();
+    inline void enable(const bool enable) override;
+    void init() override;
+    bool send(const uint8_t data) override;
+    bool read(uint8_t & ref) override;
+    inline bool isReadBufferEmpty() override;
 
     friend void USART1_IRQHandler();
 
@@ -58,7 +58,6 @@ private:
     RingBuffer<uint8_t, 16> m_SendBuff;
 
     volatile bool m_TxInProgress;
-    volatile bool m_CmdComplete;
 };
 
 

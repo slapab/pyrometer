@@ -5,6 +5,7 @@
 
 CmdProcessing::CmdProcessing(UARTCMDInterface & uartDevice, I2CInterface & i2cDev)
 	: m_uartDev(uartDevice),
+	  m_processingData(),
 	  m_currentAlgorithm(nullptr),
 	  m_whichTempRead(ReadTempType::READ_OBJECT),
 	  m_NSamples(1),
@@ -14,9 +15,8 @@ CmdProcessing::CmdProcessing(UARTCMDInterface & uartDevice, I2CInterface & i2cDe
 
 void CmdProcessing::run()
 {
-	// Received new command?
-	// todo remove isCmdComplete() method check receive buffer instead
-	if ( m_uartDev.isCmdComplete() )
+	// Received byte?
+	if (false == m_uartDev.isReadBufferEmpty())
 	{
 		parseCmd();
 	}
@@ -32,10 +32,6 @@ void CmdProcessing::run()
 
 void CmdProcessing::parseCmd()
 {
-	uint8_t cmdType = 0;
-	uint8_t cmdWhichTemp = 0;
-	ReadTempType tmp_whichTemp;
-
 	// Reading recognized command?
 	if (false == m_processingData.readingCMDData)
 	// each command must start form byte which defines command
@@ -83,88 +79,6 @@ void CmdProcessing::parseCmd()
 			break;
 		}
 	}
-
-
-
-
-//	// This lambda function just flushes currently parsing command
-//	auto _flushLatestCMD = [&] ()
-//		{
-//			uint8_t data = 0;
-//			while( true == m_uartDev.read(data))
-//			{
-//				if ( '\n' == data )
-//				{
-//					break;
-//				}
-//			}
-//		};
-//
-//	// Assign right algorithm due to received command
-//	if (CmdType::CMD_ONEREAD == static_cast<CmdType>(cmdType))
-//	{
-//		// Read last command byte -> should be END byte
-//		_flushLatestCMD();
-//
-//		// Apply algorithm assigned this command
-//		m_currentAlgorithm = &CmdProcessing::readOneTime;
-//	}
-//	else if (CmdType::CMD_MULTIPLE == static_cast<CmdType>(cmdType))
-//	{
-//		uint8_t lowByte, highByte;
-//		bool checkReturn = true;
-//
-//		// Read now the N - samples and the M [ms] delay between data capturing
-//		checkReturn &= m_uartDev.read(lowByte);
-//		checkReturn &= m_uartDev.read(highByte);
-//
-//		// If data can not be read it means that data are corrupted and need to discard this parsing procedure
-//		if (false == checkReturn)	return;
-//
-//		// store N value
-//		m_NSamples = (highByte << 8) | lowByte;
-//
-//		// Read the M [ms] time delay between reading samples from sensor
-//		checkReturn = true;
-//		checkReturn &= m_uartDev.read(lowByte);
-//		checkReturn &= m_uartDev.read(highByte);
-//
-//		// If data can not be read it means that data are corrupted and need to discard this parsing procedure
-//		if (false == checkReturn)	return;
-//
-//		// store M value
-//		m_MDelay = (highByte << 8) | lowByte;
-//
-//		// Read last command byte -> should be END byte
-//		_flushLatestCMD();
-//
-//		// Apply algorithm assigned this command
-//		m_currentAlgorithm = &CmdProcessing::readMultiple;
-//	}
-//	else if (CmdType::CMD_STOP == static_cast<CmdType>(cmdType))
-//	{
-//		// disable any action:
-//		m_currentAlgorithm = nullptr;
-//
-//		// second byte should be STOP byte but need to check this
-//		if ('\n' != cmdWhichTemp)
-//		{
-//			_flushLatestCMD();
-//		}
-//
-//		return;
-//	}
-//	// Cannot apply any changes if command is not know
-//	else
-//	{
-//
-//		// todo what need to do here
-//		_flushLatestCMD();
-//		return;
-//	}
-//
-//	// command was parsed properly apply changes
-//	m_whichTempRead = tmp_whichTemp;
 }
 
 void CmdProcessing::parseCmdOneRead()
@@ -177,31 +91,67 @@ void CmdProcessing::parseCmdOneRead()
 	m_uartDev.read(cmdWhichTemp);
 
 	// Verify second byte - which temperature need to read?
-	switch (static_cast<ReadTempType>(cmdWhichTemp))
+	const ReadTempType readType = parseCmdRecognizeReadType(cmdWhichTemp);
+	if(ReadTempType::NOT_RECOGNIZED == readType)
 	{
-	case ReadTempType::READ_AMBIENT :
-		m_whichTempRead = ReadTempType::READ_AMBIENT;
-		break ;
-	case ReadTempType::READ_OBJECT :
-		m_whichTempRead = ReadTempType::READ_OBJECT;
-		break ;
-	case ReadTempType::READ_BOTH :
-		m_whichTempRead = ReadTempType::READ_BOTH;
-		break ;
-	default :
 		// Not recognized data. Do not apply any changes and return immediately
 		return;
 	}
 
+	m_whichTempRead = readType;
 	// Command has been parsed properly. Apply algorithm assigned to this command
 	m_currentAlgorithm = &CmdProcessing::readOneTime;
 }
 
-
 void CmdProcessing::parseCmdMultipleRead()
 {
+	// Read byte from UART buffer
+	uint8_t data = 0;
+	m_uartDev.read(data);
+
+	if (0u == m_processingData.seq)
+	{
+		// Verify second byte - which temperature need to read?
+		m_processingData.readType = parseCmdRecognizeReadType(data);
+		if(ReadTempType::NOT_RECOGNIZED == m_processingData.readType)
+		{
+			// Not recognized data. Do not apply any changes,
+			// reset internal state and return immediately
+			m_processingData.readingCMDData = false;
+			m_processingData.seq = 0;
+			return;
+		}
+
+		// inform that next bytes will are command parameters
+		++m_processingData.seq;
+	}
+	// reading command parameters
+	else
+	{
+		// append byte to the temporary place - until all parameters byte will be read
+		m_processingData.paramData[m_processingData.seq-1] = data;
+		++m_processingData.seq;
+
+		// if 4 bytes of parameters were read
+		if (4u <= (m_processingData.seq-1u))
+		{
+			// convert 4B of parameters data:
+			m_NSamples = (m_processingData.paramData[1] << 8) | m_processingData.paramData[0] ;
+			m_MDelay   = (m_processingData.paramData[3] << 8) | m_processingData.paramData[2] ;
+
+			// switch active command to that just read - switch algorithm
+			m_currentAlgorithm = &CmdProcessing::readMultiple;
+			// save information which temperature need to read
+			m_whichTempRead = m_processingData.readType;
+
+			// reset internal state of processing command
+			m_processingData.seq = 0;
+			m_processingData.readingCMDData = false;
+		}
+	}
 
 }
+
 
 void CmdProcessing::parseCmdSaveData()
 {
@@ -209,8 +159,7 @@ void CmdProcessing::parseCmdSaveData()
 }
 
 
-// Algorithms assigned to commands:
-
+// ALOGRITHMS WHICH HANDLES SUPPORTED COMMANDS
 
 void CmdProcessing::readOneTime()
 {
@@ -254,5 +203,23 @@ void CmdProcessing::readOneTime()
 
 void CmdProcessing::readMultiple()
 {
+}
 
+
+// PRIVATE - HELPING METHODS:
+
+ReadTempType CmdProcessing::parseCmdRecognizeReadType(const uint8_t data)
+{
+	switch (static_cast<ReadTempType>(data))
+	{
+	case ReadTempType::READ_AMBIENT :
+		return ReadTempType::READ_AMBIENT;
+	case ReadTempType::READ_OBJECT :
+		return ReadTempType::READ_OBJECT;
+	case ReadTempType::READ_BOTH :
+		return ReadTempType::READ_BOTH;
+	default :
+		// Not recognized data. Do not apply any changes.
+		return ReadTempType::NOT_RECOGNIZED;
+	}
 }

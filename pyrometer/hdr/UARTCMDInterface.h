@@ -17,7 +17,7 @@ public:
 	UARTCMDInterface() {}
 	virtual ~UARTCMDInterface() {}
 
-	virtual bool isCmdComplete() = 0;
+	virtual bool isReadBufferEmpty() = 0;
 };
 
 

@@ -14,7 +14,7 @@
 class MockUARTCMDDevice : public UARTCMDInterface
 {
 public:
-	MOCK_METHOD0(isCmdComplete, bool());
+	MOCK_METHOD0(isReadBufferEmpty, bool());
 	MOCK_METHOD1(enable, void(const bool));
 	MOCK_METHOD0(init, void());
 	MOCK_METHOD1(send, bool(const uint8_t));

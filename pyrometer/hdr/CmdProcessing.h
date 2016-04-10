@@ -25,9 +25,10 @@ enum class CmdType : uint8_t
 
 enum class ReadTempType : uint8_t
 {
-	READ_AMBIENT = 0x11,
-	READ_OBJECT  = 0x12,
-	READ_BOTH  	 = 0x13
+	NOT_RECOGNIZED = 0x00,
+	READ_AMBIENT   = 0x11,
+	READ_OBJECT    = 0x12,
+	READ_BOTH  	   = 0x13
 };
 
 
@@ -46,8 +47,23 @@ protected:
 
 	struct ProcessingTempaData
 	{
+		ProcessingTempaData()
+			: cmdType(CmdType::CMD_STOP),
+			  readType(ReadTempType::NOT_RECOGNIZED),
+			  readingCMDData(false),
+			  seq(0) {}
+
+		// temporary place for storing command parameters data
+		uint8_t paramData[4];
+		// recognized command type
 		CmdType cmdType;
+		// recognized read type
+		ReadTempType readType;
+		// true if command type was recognized and still reading / parsing command
 		bool readingCMDData;
+		// if command has multiple parameters to read this variable is using to
+		// tracking the order of received bytes
+		uint8_t seq;
 	};
 
 	// PROTECTED METHODS:
@@ -63,8 +79,8 @@ protected:
 	void readMultiple();
 
 	// PROTECTED FIELDS:
-	UARTCMDInterface & m_uartDev;
 
+	UARTCMDInterface & m_uartDev;
 	ProcessingTempaData m_processingData;
 	AlgorithmType m_currentAlgorithm;
 
@@ -74,6 +90,10 @@ protected:
 	uint16_t m_MDelay;		// the M value from command frame
 
 	MLX90614Sensor m_IRTempSensor;
+
+
+private:
+	ReadTempType parseCmdRecognizeReadType(const uint8_t data);
 };
 
 
