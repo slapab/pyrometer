@@ -15,6 +15,8 @@
 #define MLX90614_RAM_TA  0x06   /// Address in RAM where ambient temperature is storing
 #define MLX90614_RAM_TO1 0x07   /// Address in RAM where object temperature is storing
 
+#define MLX90614_EPPROM_EMISSIVITY 0x04 ///Address in EPPROM where is stored value of emissivity
+
 /** Commands which are understand by MLX90614 sensor
     * @note EEPROM_CMD and RAM_CMD must be combined with 5 LSB's bits of memory
     *       address.
@@ -37,10 +39,10 @@ public:
     uint16_t readAmbiendTemp();
     uint16_t readObjectTemp();
 
+    uint8_t  readFlags();
     uint16_t readRAM(const uint8_t addr);
     uint16_t readEEPROM(const uint8_t addr);
-
-    // todo write methods
+    bool writeEmissivity(const uint16_t data);
 
 
 private:

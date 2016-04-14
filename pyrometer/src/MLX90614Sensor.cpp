@@ -42,6 +42,38 @@ uint16_t MLX90614Sensor::readRAM(const uint8_t addr)
 
 uint16_t MLX90614Sensor::readEEPROM(const uint8_t addr)
 {
-    return 0;
+    m_dev.read(addr, &m_buff[0], 2);
+    return static_cast<uint16_t>((m_buff[1] << 8) | m_buff[0]);
 }
 
+
+bool MLX90614Sensor::writeEmissivity(const uint16_t data)
+{
+    constexpr const uint8_t epprom_emissivity = MLX90614_CMD_EEPROM | MLX90614_EPPROM_EMISSIVITY;
+    uint8_t emissivityTab[2] = {0, 0};
+
+    // write 0x0000 first
+    m_dev.send(epprom_emissivity, &emissivityTab[0], 2);
+
+    // sleep for some time
+    for( long i = 0; i < 60000; ++i) {}
+
+    // write valid data
+    emissivityTab[0] = static_cast<uint8_t>(data);  //Low byte
+    emissivityTab[1] = static_cast<uint8_t>(data >> 8); //High byte
+    m_dev.send(epprom_emissivity, &emissivityTab[0], 2);
+
+    for( long i = 0; i < 60000; ++i) {}
+
+    return true;
+}
+
+uint8_t MLX90614Sensor::readFlags()
+{
+    // todo read flags -> but without restart!
+//    constexpr uint8_t cmd = MLX90614_CMD_READ_FLAGS;
+
+//    m_dev.read(cmd, &m_buff[0], 2);
+
+    return m_buff[0];
+}

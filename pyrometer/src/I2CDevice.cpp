@@ -107,11 +107,10 @@ void I2CDevice::send(const uint8_t addr, const uint8_t * const pBuff, const size
     // this is write transmission
     I2C1->CR2 &= ~I2C_CR2_RD_WRN;
 
-    // set autoend
-    I2C1->CR2 |= I2C_CR2_AUTOEND;
-
-    // generate start
-    I2C1->CR2 |= I2C_CR2_START;
+    I2C1->CR2 |= I2C_CR2_AUTOEND    // set autoend
+              |  I2C_CR2_PECBYTE    // PEC byte will be transmitted
+              |  I2C_CR2_START      // generate start
+              ;
 
     // Transmit the command / address where to store:
     // - wait for TX buffer to be empty
@@ -128,6 +127,7 @@ void I2CDevice::send(const uint8_t addr, const uint8_t * const pBuff, const size
         // check for NACK flag
         if(I2C1->ISR & I2C_ISR_NACKF)
         {
+            // todo report an error
             // This is an error
             // 1) not found address
             // 2) Receiver cannot read byte
@@ -142,7 +142,8 @@ void I2CDevice::send(const uint8_t addr, const uint8_t * const pBuff, const size
     }
 
 
-    // todo checking for TC flag?
+    // wait until STOP symbol will be detected
+    while(I2C1->ISR & I2C_ISR_BUSY);
 
     // disable peripheral -> clear flags
     enable(false);
@@ -212,7 +213,8 @@ void I2CDevice::read(const uint8_t addr, uint8_t * const pBuff, const size_t len
     // wait for the PEC byte and he end transmission
     while( I2C1->ISR & I2C_ISR_BUSY );
 
-    // check if transmission was not broken
+
+    // todo check if transmission was not broken
     if( I2C1->ISR & I2C_ISR_PECERR )
     {
         // return PEC error

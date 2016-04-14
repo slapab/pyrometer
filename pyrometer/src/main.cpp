@@ -67,8 +67,14 @@ int main()
 
           for ( volatile int i = 0 ; i < 4800000 ; ++i) {}
 
-          uint16_t tempAmb = irSensor.readAmbiendTemp();
-          uint16_t tempObj = irSensor.readObjectTemp();
+          irSensor.writeEmissivity(58982);
+
+          constexpr const uint8_t cmd_emissivity = MLX90614_CMD_EEPROM | MLX90614_EPPROM_EMISSIVITY;
+          uint16_t em = 0;
+          em = irSensor.readEEPROM(cmd_emissivity);
+
+//          uint16_t tempAmb = irSensor.readAmbiendTemp();
+//          uint16_t tempObj = irSensor.readObjectTemp();
 
           GPIOC->ODR &= ~GPIO_ODR_8;
           GPIOC->ODR |= GPIO_ODR_9;

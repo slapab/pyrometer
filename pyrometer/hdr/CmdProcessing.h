@@ -19,8 +19,9 @@ enum class CmdType : uint8_t
 {
     CMD_ONEREAD  = 0xAA,
     CMD_MULTIPLE = 0xBB,
-    CMD_STOP      = 0xE8,
-    CMD_ALIVE      = 0xEE
+    CMD_STOP     = 0xE8,
+    CMD_ALIVE    = 0xEE,
+    CMD_SAVE     = 0x55
 };
 
 enum class ReadTempType : uint8_t
@@ -77,20 +78,23 @@ protected:
     // - all supported command algorithms:
     void readOneTime();
     void readMultiple();
+    void saveEmissivity();
 
     // PROTECTED FIELDS:
 
     UARTCMDInterface &  m_uartDev;
-    ProcessingTempaData m_processingData;
-    AlgorithmType         m_currentAlgorithm;
-
-    ReadTempType        m_whichTempRead;
-
-    uint16_t m_NSamples;    // the N value from command frame
-    uint16_t m_MDelay;        // the M value from command frame
-
     MLX90614Sensor m_IRTempSensor;
 
+    ProcessingTempaData m_processingData;
+    AlgorithmType       m_currentAlgorithm;
+
+    // Data for reading commands
+    ReadTempType m_whichTempRead;
+    uint16_t     m_NSamples;    // the N value from command frame
+    uint16_t     m_MDelay;      // the M value from command frame
+
+    // Data for save emissivity command
+    uint16_t     m_Emissivity;  // value which need to be write to IR sensor
 
 private:
     ReadTempType parseCmdRecognizeReadType(const uint8_t data);

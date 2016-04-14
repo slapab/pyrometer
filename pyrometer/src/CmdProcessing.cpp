@@ -45,7 +45,8 @@ void CmdProcessing::parseCmd()
         if ((CmdType::CMD_ONEREAD == cmdType) ||
             (CmdType::CMD_MULTIPLE == cmdType) ||
             (CmdType::CMD_ALIVE == cmdType) ||
-            (CmdType::CMD_STOP == cmdType))
+            (CmdType::CMD_STOP == cmdType) ||
+            (CmdType::CMD_SAVE == cmdType))
         {
             // Command has been recognized
             m_processingData.cmdType = cmdType;
@@ -73,6 +74,9 @@ void CmdProcessing::parseCmd()
         case CmdType::CMD_ALIVE:
             break;
         case CmdType::CMD_STOP:
+            break;
+        case CmdType::CMD_SAVE:
+            parseCmdSaveData();
             break;
         default:
             //fatal!
@@ -155,7 +159,24 @@ void CmdProcessing::parseCmdMultipleRead()
 
 void CmdProcessing::parseCmdSaveData()
 {
+    // Read byte from UART buffer
+    uint8_t data = 0;
+    m_uartDev.read(data);
 
+    m_processingData.paramData[m_processingData.seq] = data;
+    ++m_processingData.seq;
+
+    if (2u >= m_processingData.seq)
+    {
+        // save data to variable
+        m_Emissivity = (m_processingData.paramData[1] << 8u) | m_processingData.paramData[0];
+        // change command algorithm
+        m_currentAlgorithm = &CmdProcessing::saveEmissivity;
+
+        // reset internal state of processing command
+        m_processingData.seq = 0;
+        m_processingData.readingCMDData = false;
+    }
 }
 
 
@@ -205,6 +226,21 @@ void CmdProcessing::readMultiple()
 {
 }
 
+
+void CmdProcessing::saveEmissivity()
+{
+    // Clear EEPROM -> required before write valid data
+        // todo
+    // Write emissivity data to IR sensor
+        // todo
+    // Verify if value was write properly
+        //todo
+    // If value has been written properly then send ack via UART
+        //todo
+
+    // Disable algorithm after writing data to the IR sensor
+    m_currentAlgorithm = nullptr;
+}
 
 // PRIVATE - HELPING METHODS:
 
