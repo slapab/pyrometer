@@ -24,7 +24,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-	 void USART1_IRQHandler();
+     void USART1_IRQHandler();
 #ifdef __cplusplus
 }
 #endif
@@ -34,12 +34,12 @@ extern "C" {
 class UARTDevice : public virtual UARTCMDInterface
 {
 public:
-	UARTDevice(const UARTDevice &) 			   = delete;
-	UARTDevice(UARTDevice &&) 				   = delete;
-	UARTDevice & operator=(const UARTDevice &) = delete;
-	UARTDevice & operator=(UARTDevice &&) 	   = delete;
+    UARTDevice(const UARTDevice &)                = delete;
+    UARTDevice(UARTDevice &&)                    = delete;
+    UARTDevice & operator=(const UARTDevice &) = delete;
+    UARTDevice & operator=(UARTDevice &&)        = delete;
 
-	static UARTDevice & get();
+    static UARTDevice & get();
 
     inline void enable(const bool enable) override;
     void init() override;

@@ -14,10 +14,10 @@
 class UARTCMDInterface : public virtual UARTInterface
 {
 public:
-	UARTCMDInterface() {}
-	virtual ~UARTCMDInterface() {}
+    UARTCMDInterface() {}
+    virtual ~UARTCMDInterface() {}
 
-	virtual bool isReadBufferEmpty() = 0;
+    virtual bool isReadBufferEmpty() = 0;
 };
 
 

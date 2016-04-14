@@ -11,13 +11,13 @@
 class UARTInterface
 {
 public:
-	UARTInterface() {}
-	virtual ~UARTInterface() {}
+    UARTInterface() {}
+    virtual ~UARTInterface() {}
 
-	virtual inline void enable(const bool enable) = 0;
-	virtual void init() = 0;
-	virtual bool send(const uint8_t data) = 0;
-	virtual bool read(uint8_t & ref) = 0;
+    virtual inline void enable(const bool enable) = 0;
+    virtual void init() = 0;
+    virtual bool send(const uint8_t data) = 0;
+    virtual bool read(uint8_t & ref) = 0;
 };
 
 
