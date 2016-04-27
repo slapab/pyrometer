@@ -1,6 +1,8 @@
 #include <MLX90614Sensor.h>
 #include "I2CDevice.h"
 
+extern uint32_t SystemCoreClock;
+
 MLX90614Sensor::MLX90614Sensor(I2CInterface & i2cDev)
     : m_sensorAddr(0x5A),   // default sensor's address
       m_dev(i2cDev)   // assign sensor's address to the communication object
@@ -49,21 +51,25 @@ uint16_t MLX90614Sensor::readEEPROM(const uint8_t addr)
 
 bool MLX90614Sensor::writeEmissivity(const uint16_t data)
 {
+    // Calculate the EEPROM write operation delay -> at least 5ms needed
+    const uint32_t eppromOpDelay = 6u * (SystemCoreClock/1000u);
+    // Construct the EEPROM access of emissivity cell
     constexpr const uint8_t epprom_emissivity = MLX90614_CMD_EEPROM | MLX90614_EPPROM_EMISSIVITY;
-    uint8_t emissivityTab[2] = {0, 0};
+    m_buff[0] = m_buff[1] = 0;  // create data to erase EEPROM cell
 
-    // write 0x0000 first
-    m_dev.send(epprom_emissivity, &emissivityTab[0], 2);
+    // write 0x0000 first - erasing EEPROM cell
+    m_dev.send(epprom_emissivity, &m_buff[0], 2);
 
-    // sleep for some time
-    for( long i = 0; i < 60000; ++i) {}
+    // Need to sleep for at least 5ms before next EEPROM operation
+    for( long i = 0; i < eppromOpDelay; ++i) { __asm__(""); /* to prevent optimization */ }
 
     // write valid data
-    emissivityTab[0] = static_cast<uint8_t>(data);  //Low byte
-    emissivityTab[1] = static_cast<uint8_t>(data >> 8); //High byte
-    m_dev.send(epprom_emissivity, &emissivityTab[0], 2);
+    m_buff[0] = static_cast<uint8_t>(data);      // Low byte
+    m_buff[1] = static_cast<uint8_t>(data >> 8); // High byte
+    m_dev.send(epprom_emissivity, &m_buff[0], 2);
 
-    for( long i = 0; i < 60000; ++i) {}
+    // Need to wait at least 5ms until next EEPROM operation
+    for( long i = 0; i < eppromOpDelay; ++i) { __asm__(""); /* to prevent optimization */ }
 
     return true;
 }
