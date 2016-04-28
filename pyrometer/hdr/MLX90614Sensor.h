@@ -43,7 +43,9 @@ public:
     uint16_t readRAM(const uint8_t addr);
     uint16_t readEEPROM(const uint8_t addr);
     bool writeEmissivity(const uint16_t data);
-
+    void goSleep();
+    void wakeUp();
+    void restart();
 
 private:
     /// Sensor SMBus slave address

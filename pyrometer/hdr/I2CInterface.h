@@ -23,6 +23,8 @@ public:
 
     virtual void send(const uint8_t, const uint8_t * const, const size_t ) = 0;
     virtual void read(const uint8_t, uint8_t * const, const size_t) = 0;
+
+    virtual void wakeUp() = 0;
 };
 
 

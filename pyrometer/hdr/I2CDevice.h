@@ -25,6 +25,7 @@ public:
     void send(const uint8_t addr, const uint8_t * const pBuff, const size_t size) override;
     void read(const uint8_t addr, uint8_t * const pBuff, const size_t len) override;
 
+    void wakeUp() override;
 
 private:
     void initSMBusMode();

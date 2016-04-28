@@ -8,6 +8,7 @@
 #include "stm32f0xx.h"
 #include "I2CDevice.h"
 
+extern uint32_t SystemCoreClock;
 
 /*
  * This implementation will use the I2C1 and PB8 as SCL and PB9 as SDA
@@ -66,6 +67,38 @@ void I2CDevice::deinit()
     //todo
 }
 
+void I2CDevice::wakeUp()
+{
+    // Set mode to GPIO on SPI pins
+    GPIOB->MODER &= ~(GPIO_MODER_MODER8 | GPIO_MODER_MODER9);     // reset bits
+    GPIOB->MODER |=  GPIO_MODER_MODER8_0 | GPIO_MODER_MODER9_0;   // enable GPIO function
+
+    // Open Drain type -> because of external PULL-UP resistors
+    GPIOB->OTYPER |= (GPIO_OTYPER_OT_8 | GPIO_OTYPER_OT_9);
+
+
+    // Generate wake up sequence:
+    // - SCL high, SDA high for some time
+    GPIOB->BSRR |= GPIO_BSRR_BS_8 | GPIO_BSRR_BS_9;
+    __asm__("nop"); __asm__("nop"); __asm__("nop");
+
+    // - SDA go to low for at least 14 ms
+    // PB9 is SDA
+    GPIOB->BSRR |= GPIO_BSRR_BR_9;
+
+    // Delay required during waking up, at least 14ms but additional delay is required before reading the first data
+    // todo get time from systick
+    const uint32_t wakeDelay = 30u * (SystemCoreClock/8000u);
+    for (uint32_t i = 0u; i < wakeDelay; ++i) { __asm__ volatile(""); }
+
+    // - SDA go to high
+    GPIOB->BSRR |= GPIO_BSRR_BS_9;
+    __asm__("nop"); __asm__("nop"); __asm__("nop");
+
+    // - enable SMBus mode
+    init();
+}
+
 
 void I2CDevice::enable(const bool enable)
 {
@@ -90,8 +123,6 @@ void I2CDevice::send(const uint8_t addr, const uint8_t * const pBuff, const size
 {
     if(nullptr == pBuff)
         return ;
-    if(2 > size)
-        return ;
 
 
     //set the Slave address
@@ -114,7 +145,7 @@ void I2CDevice::send(const uint8_t addr, const uint8_t * const pBuff, const size
 
     // Transmit the command / address where to store:
     // - wait for TX buffer to be empty
-    while( !(I2C1->ISR & I2C_ISR_TXIS) );
+    while( !(I2C1->ISR & I2C_ISR_TXIS) ) { asm(""); }
     // - write the command / address
     I2C1->TXDR = addr;
 
@@ -122,7 +153,7 @@ void I2CDevice::send(const uint8_t addr, const uint8_t * const pBuff, const size
     for(size_t i = 0; i < size ; ++i)
     {
         // wait for NACK flag or TXIS flag
-        while(!(I2C1->ISR & I2C_ISR_NACKF) && !(I2C1->ISR & I2C_ISR_TXIS));
+        while(!(I2C1->ISR & I2C_ISR_NACKF) && !(I2C1->ISR & I2C_ISR_TXIS)) { asm(""); }
 
         // check for NACK flag
         if(I2C1->ISR & I2C_ISR_NACKF)
@@ -143,7 +174,7 @@ void I2CDevice::send(const uint8_t addr, const uint8_t * const pBuff, const size
 
 
     // wait until STOP symbol will be detected
-    while(I2C1->ISR & I2C_ISR_BUSY);
+    while(I2C1->ISR & I2C_ISR_BUSY) { asm(""); }
 
     // disable peripheral -> clear flags
     enable(false);
