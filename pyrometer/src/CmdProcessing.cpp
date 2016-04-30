@@ -229,14 +229,27 @@ void CmdProcessing::readMultiple()
 
 void CmdProcessing::saveEmissivity()
 {
-    // Clear EEPROM -> required before write valid data
-        // todo
-    // Write emissivity data to IR sensor
-        // todo
-    // Verify if value was write properly
-        //todo
-    // If value has been written properly then send ack via UART
-        //todo
+	constexpr const uint8_t cmdEmissivity = MLX90614_CMD_EEPROM | MLX90614_EPPROM_EMISSIVITY;
+	uint16_t emValue = 0;
+
+	// save the emissivity to the IR sensor
+    m_IRTempSensor.writeEmissivity(m_Emissivity);
+
+    // restart the IR sensor
+	m_IRTempSensor.restart();
+
+    // Verify if value of emissivity was write properly into EEPROM
+    emValue = m_IRTempSensor.readEEPROM(cmdEmissivity);
+
+    // If value has been read properly then send ack via UART
+    if (m_Emissivity == emValue)
+    {
+    	m_uartDev.send(static_cast<uint8_t>(CmdResponseType::RESP_SAVE_DONE));
+    }
+    else
+    {
+    	m_uartDev.send(static_cast<uint8_t>(CmdResponseType::RESP_ERROR));
+    }
 
     // Disable algorithm after writing data to the IR sensor
     m_currentAlgorithm = nullptr;

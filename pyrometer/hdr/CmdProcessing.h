@@ -29,9 +29,15 @@ enum class ReadTempType : uint8_t
     NOT_RECOGNIZED = 0x00,
     READ_AMBIENT   = 0x11,
     READ_OBJECT    = 0x12,
-    READ_BOTH         = 0x13
+    READ_BOTH      = 0x13
 };
 
+enum class CmdResponseType : uint8_t
+{
+	RESP_ERROR     = 0x0D,
+	RESP_SAVE_DONE = 0x55,
+	RESP_ALIVE     = 0xEE
+};
 
 
 class CmdProcessing
