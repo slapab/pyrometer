@@ -1,7 +1,8 @@
 #include <MLX90614Sensor.h>
 #include "I2CDevice.h"
+#include "HandleTimer.h"
+#include "TimerCore.h"
 
-extern uint32_t SystemCoreClock;
 
 MLX90614Sensor::MLX90614Sensor(I2CInterface & i2cDev)
     : m_sensorAddr(0x5A),   // default sensor's address
@@ -51,22 +52,19 @@ uint16_t MLX90614Sensor::readEEPROM(const uint8_t addr)
 
 bool MLX90614Sensor::writeEmissivity(const uint16_t data)
 {
-    // Calculate the EEPROM write operation delay -> at least 5ms needed
-    const uint32_t eppromOpDelay = 6u * (SystemCoreClock/8000u);
+    // Timer for executing EEPROM write operation delay -> at least 5ms needed
+    auto t1 = HandleTimer(SysTickTimerCore);
+
     // Construct the EEPROM access of emissivity cell
     constexpr const uint8_t epprom_emissivity = MLX90614_CMD_EEPROM | MLX90614_EPPROM_EMISSIVITY;
     m_buff[0] = m_buff[1] = 0;  // create data to erase EEPROM cell
 
-    auto localDelay = [&]() {
-                for( long i = 0; i < eppromOpDelay; ++i)
-                    __asm__ volatile(""); /* to prevent optimization */
-            };
 
     // write 0x0000 first - erasing EEPROM cell
     m_dev.send(epprom_emissivity, &m_buff[0], 2);
 
     // Need to sleep for at least 5ms before next EEPROM operation
-    localDelay();
+    t1.Sleep_ms(6);
 
     // write valid data
     m_buff[0] = static_cast<uint8_t>(data);      // Low byte
@@ -74,7 +72,7 @@ bool MLX90614Sensor::writeEmissivity(const uint16_t data)
     m_dev.send(epprom_emissivity, &m_buff[0], 2);
 
     // Need to wait at least 5ms until next EEPROM operation
-    localDelay();
+    t1.Sleep_ms(6);
 
     return true;
 }

@@ -7,6 +7,8 @@
 
 #include "stm32f0xx.h"
 #include "I2CDevice.h"
+#include "TimerCore.h"
+#include "HandleTimer.h"
 
 extern uint32_t SystemCoreClock;
 
@@ -87,9 +89,8 @@ void I2CDevice::wakeUp()
     GPIOB->BSRR |= GPIO_BSRR_BR_9;
 
     // Delay required during waking up, at least 14ms but additional delay is required before reading the first data
-    // todo get time from systick
-    const uint32_t wakeDelay = 30u * (SystemCoreClock/8000u);
-    for (uint32_t i = 0u; i < wakeDelay; ++i) { __asm__ volatile(""); }
+    auto t1 = HandleTimer(SysTickTimerCore);
+    t1.Sleep_ms(30);
 
     // - SDA go to high
     GPIOB->BSRR |= GPIO_BSRR_BS_9;
