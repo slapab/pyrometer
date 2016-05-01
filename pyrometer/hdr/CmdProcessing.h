@@ -82,9 +82,11 @@ protected:
     void parseCmdSaveData();
 
     // - all supported command algorithms:
-    void readOneTime();
-    void readMultiple();
-    void saveEmissivity();
+    void HandleReadOneTimeCmd();
+    void HandleReadMultipleCmd();
+    void HandleSaveEmissivityCmd();
+    void HandleStopCmd();
+    void HandleAliveCmd();
 
     // PROTECTED FIELDS:
 

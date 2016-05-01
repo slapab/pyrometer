@@ -72,8 +72,12 @@ void CmdProcessing::parseCmd()
             parseCmdMultipleRead();
             break;
         case CmdType::CMD_ALIVE:
+            // Change algorithm directly
+            m_currentAlgorithm = &CmdProcessing::HandleAliveCmd;
             break;
         case CmdType::CMD_STOP:
+            // Change algorithm directly
+            m_currentAlgorithm = &CmdProcessing::HandleStopCmd;
             break;
         case CmdType::CMD_SAVE:
             parseCmdSaveData();
@@ -104,7 +108,7 @@ void CmdProcessing::parseCmdOneRead()
 
     m_whichTempRead = readType;
     // Command has been parsed properly. Apply algorithm assigned to this command
-    m_currentAlgorithm = &CmdProcessing::readOneTime;
+    m_currentAlgorithm = &CmdProcessing::HandleReadOneTimeCmd;
 }
 
 void CmdProcessing::parseCmdMultipleRead()
@@ -144,7 +148,7 @@ void CmdProcessing::parseCmdMultipleRead()
             m_MDelay   = (m_processingData.paramData[3] << 8) | m_processingData.paramData[2] ;
 
             // switch active command to that just read - switch algorithm
-            m_currentAlgorithm = &CmdProcessing::readMultiple;
+            m_currentAlgorithm = &CmdProcessing::HandleReadMultipleCmd;
             // save information which temperature need to read
             m_whichTempRead = m_processingData.readType;
 
@@ -171,7 +175,7 @@ void CmdProcessing::parseCmdSaveData()
         // save data to variable
         m_Emissivity = (m_processingData.paramData[1] << 8u) | m_processingData.paramData[0];
         // change command algorithm
-        m_currentAlgorithm = &CmdProcessing::saveEmissivity;
+        m_currentAlgorithm = &CmdProcessing::HandleSaveEmissivityCmd;
 
         // reset internal state of processing command
         m_processingData.seq = 0;
@@ -182,7 +186,7 @@ void CmdProcessing::parseCmdSaveData()
 
 // ALOGRITHMS WHICH HANDLES SUPPORTED COMMANDS
 
-void CmdProcessing::readOneTime()
+void CmdProcessing::HandleReadOneTimeCmd()
 {
     uint16_t temp, temp_second;
 
@@ -222,12 +226,27 @@ void CmdProcessing::readOneTime()
 }
 
 
-void CmdProcessing::readMultiple()
+void CmdProcessing::HandleReadMultipleCmd()
 {
 }
 
+void CmdProcessing::HandleStopCmd()
+{
+    // Disable any algorithm which is working right now
+    m_currentAlgorithm = nullptr;
+}
 
-void CmdProcessing::saveEmissivity()
+
+void CmdProcessing::HandleAliveCmd()
+{
+    // Disable any algorithm which is working right now
+    m_currentAlgorithm = nullptr;
+    // Send the response byte
+    m_uartDev.send(static_cast<uint8_t>(CmdResponseType::RESP_ALIVE));
+}
+
+
+void CmdProcessing::HandleSaveEmissivityCmd()
 {
 	constexpr const uint8_t cmdEmissivity = MLX90614_CMD_EEPROM | MLX90614_EPPROM_EMISSIVITY;
 	uint16_t emValue = 0;
