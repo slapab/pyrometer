@@ -10,7 +10,6 @@
 #include "TimerCore.h"
 #include "HandleTimer.h"
 
-extern uint32_t SystemCoreClock;
 
 /*
  * This implementation will use the I2C1 and PB8 as SCL and PB9 as SDA

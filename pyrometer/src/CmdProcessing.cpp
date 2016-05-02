@@ -16,8 +16,11 @@ CmdProcessing::CmdProcessing(UARTCMDInterface & uartDevice, I2CInterface & i2cDe
       m_NCnt(0),
       m_PrevTimePoint(0),
       m_Emissivity(0),
-      m_IRTempSensor(i2cDev)
-{}
+      m_IRTempSensor(MLX90614Sensor(i2cDev))
+{
+    m_uartDev.init();
+    m_uartDev.enable(true);
+}
 
 void CmdProcessing::run()
 {
@@ -45,7 +48,7 @@ void CmdProcessing::parseCmd()
     // then check if the current one byte is the valid command
     {
         uint8_t data = 0;
-        m_uartDev.read(data);    // todo check return val?
+        m_uartDev.read(data);
         CmdType cmdType = static_cast<CmdType>(data);
 
         if ((CmdType::CMD_ONEREAD == cmdType) ||
@@ -157,8 +160,8 @@ void CmdProcessing::parseCmdMultipleRead()
             m_currentAlgorithm = &CmdProcessing::HandleReadMultipleCmd;
             // save information which temperature need to read
             m_whichTempRead = m_processingData.readType;
-            // get current time point
-            m_PrevTimePoint = SysTickTimerCore.GetTimePoint();
+            // get current time point and substrate the duration -> force first read as soon as possible
+            m_PrevTimePoint = SysTickTimerCore.GetTimePoint() - m_MDelay - 1 ;
             m_NCnt = 0;
 
             // reset internal state of processing command
@@ -227,13 +230,13 @@ void CmdProcessing::HandleReadMultipleCmd()
 
         // - - create Start Byte:
         const uint8_t startByte = (static_cast<uint8_t>(CmdType::CMD_MULTIPLE) & 0xF0) |
-                                   (static_cast<uint8_t>(m_whichTempRead) & 0x0F);
+                                  (static_cast<uint8_t>(m_whichTempRead) & 0x0F);
         // - send temperatures:
         SendTemperaturesFrame(startByte, temperatures, m_whichTempRead);
 
         // - keep watching if samples already were sent. If NSamples is 0 then send continuously.
         ++m_NCnt;
-        if ((m_NSamples < m_NCnt) && (0 < m_NSamples))
+        if ((m_NSamples <= m_NCnt) && (0 < m_NSamples))
         {   // Already were sent all required samples so everything is done
             m_currentAlgorithm = nullptr;
         }
@@ -242,6 +245,9 @@ void CmdProcessing::HandleReadMultipleCmd()
 
 void CmdProcessing::HandleStopCmd()
 {
+    // reset internal state of processing command
+    m_processingData.seq = 0;
+    m_processingData.readingCMDData = false;
     // Disable any algorithm which is working right now
     m_currentAlgorithm = nullptr;
 }
@@ -249,6 +255,9 @@ void CmdProcessing::HandleStopCmd()
 
 void CmdProcessing::HandleAliveCmd()
 {
+    // reset internal state of processing command
+    m_processingData.seq = 0;
+    m_processingData.readingCMDData = false;
     // Disable any algorithm which is working right now
     m_currentAlgorithm = nullptr;
     // Send the response byte

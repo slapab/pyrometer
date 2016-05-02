@@ -7,6 +7,9 @@
 #include "RingBuffer.hpp"
 #include "UARTDevice.h"
 #include "I2CDevice.h"
+#include "TimerCore.h"
+#include "HandleTimer.h"
+#include "CmdProcessing.h"
 
 #include <array>
 
@@ -21,8 +24,7 @@
 
 void SysTick_Handler()
 {
-	volatile int i = 0;
-	++i;
+    ++SysTickTimerCore;
 }
 
 int main()
@@ -43,59 +45,65 @@ int main()
 
 
     SystemCoreClockUpdate();
-    SysTick_Config( SystemCoreClock / 1000 ) ;
-
+    SysTick_Config( SystemCoreClock / 1000 ) ; //ms
 
 
 
     I2CDevice i2cDev(0x5A);
-    MLX90614Sensor irSensor(i2cDev);
+    //MLX90614Sensor irSensor(i2cDev);
 
     UARTDevice & UART1dev = UARTDevice::get();
     UART1dev.init();
 
+    CmdProcessing cmdProcessing(UART1dev, i2cDev);
 
-    for (auto i = 1 ; i <= 3 ; ++i)
-    	UART1dev.send(i);
-
-    int a = 1 ;
-    while(a-- != 0)
+    while(1)
     {
-          // toggle bit?
-          GPIOC->ODR |= GPIO_ODR_8;
-          GPIOC->ODR &= ~GPIO_ODR_9;
-
-          for ( volatile int i = 0 ; i < 4800000 ; ++i) {}
-
-          irSensor.writeEmissivity(58982);
-
-          constexpr const uint8_t cmd_emissivity = MLX90614_CMD_EEPROM | MLX90614_EPPROM_EMISSIVITY;
-          uint16_t em = 0;
-          em = irSensor.readEEPROM(cmd_emissivity);
-
-//          uint16_t tempAmb = irSensor.readAmbiendTemp();
-//          uint16_t tempObj = irSensor.readObjectTemp();
-
-          GPIOC->ODR &= ~GPIO_ODR_8;
-          GPIOC->ODR |= GPIO_ODR_9;
-
-          for ( volatile int i = 0 ; i < 480000 ; ++i) {}
+        cmdProcessing.run();
     }
-    uint8_t rdata = 0;
-    UART1dev.enable(true);
-    while(1) {
 
-    	if ( true == UART1dev.read(rdata) )
-    	{
-    		uint16_t tempAmb = irSensor.readAmbiendTemp();
-    		uint16_t tempObj = irSensor.readObjectTemp();
-    		UART1dev.send(tempAmb>>8);
-    		UART1dev.send(tempAmb);
-    		UART1dev.send('\n');
-    		UART1dev.send(tempObj>>8);
-			UART1dev.send(tempObj);
-			UART1dev.send('\n');
-    	}
-    }
+
+//    int a = 1 ;
+//    while(a-- != 0)
+//    {
+//          // toggle bit?
+//          GPIOC->ODR |= GPIO_ODR_8;
+//          GPIOC->ODR &= ~GPIO_ODR_9;
+//
+//          for ( volatile int i = 0 ; i < 4800000 ; ++i) {}
+//
+//          irSensor.writeEmissivity(58982);
+//
+//          HandleTimer(SysTickTimerCore).Sleep_ms(20);
+//
+//          constexpr const uint8_t cmd_emissivity = MLX90614_CMD_EEPROM | MLX90614_EPPROM_EMISSIVITY;
+//          uint16_t em = 0;
+//          em = irSensor.readEEPROM(cmd_emissivity);
+////          irSensor.goSleep();
+////          irSensor.wakeUp();
+////          uint16_t tempAmb = irSensor.readAmbiendTemp();
+////          uint16_t tempObj = irSensor.readObjectTemp();
+//
+//          GPIOC->ODR &= ~GPIO_ODR_8;
+//          GPIOC->ODR |= GPIO_ODR_9;
+//
+//          for ( volatile int i = 0 ; i < 480000 ; ++i) {}
+//    }
+//    uint8_t rdata = 0;
+//    UART1dev.enable(true);
+//    while(1) {
+//
+//    	if ( true == UART1dev.read(rdata) )
+//    	{
+//    		uint16_t tempAmb = irSensor.readAmbiendTemp();
+//    		uint16_t tempObj = irSensor.readObjectTemp();
+//    		UART1dev.send(tempAmb>>8);
+//    		UART1dev.send(tempAmb);
+//    		UART1dev.send('\n');
+//    		UART1dev.send(tempObj>>8);
+//			UART1dev.send(tempObj);
+//			UART1dev.send('\n');
+//    	}
+//    }
     return 0;
 }

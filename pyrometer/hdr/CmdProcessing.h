@@ -45,6 +45,7 @@ enum class CmdResponseType : uint8_t
 class CmdProcessing
 {
 public:
+    CmdProcessing() = delete;
     CmdProcessing(UARTCMDInterface & uartDev, I2CInterface & i2cDev );
     ~CmdProcessing() {}
 
