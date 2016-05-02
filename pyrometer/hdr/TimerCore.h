@@ -20,7 +20,7 @@ public:
 
     TimerCore();
     TimerCore & operator++();
-    timer_type getValue() const;
+    timer_type GetTimePoint() const;
 
 protected:
     timer_type m_Value;

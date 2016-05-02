@@ -13,7 +13,7 @@ TimerCore::TimerCore()
     : m_Value(0)
 {}
 
-TimerCore::timer_type TimerCore::getValue() const
+TimerCore::timer_type TimerCore::GetTimePoint() const
 {
     return m_Value;
 }

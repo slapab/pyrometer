@@ -3,6 +3,9 @@
 #include "UARTCMDInterface.h"
 #include "I2CInterface.h"
 
+#include "TimerCore.h"
+#include "HandleTimer.h"
+
 CmdProcessing::CmdProcessing(UARTCMDInterface & uartDevice, I2CInterface & i2cDev)
     : m_uartDev(uartDevice),
       m_processingData(),
@@ -10,6 +13,9 @@ CmdProcessing::CmdProcessing(UARTCMDInterface & uartDevice, I2CInterface & i2cDe
       m_whichTempRead(ReadTempType::READ_OBJECT),
       m_NSamples(1),
       m_MDelay(10),
+      m_NCnt(0),
+      m_PrevTimePoint(0),
+      m_Emissivity(0),
       m_IRTempSensor(i2cDev)
 {}
 
@@ -151,6 +157,9 @@ void CmdProcessing::parseCmdMultipleRead()
             m_currentAlgorithm = &CmdProcessing::HandleReadMultipleCmd;
             // save information which temperature need to read
             m_whichTempRead = m_processingData.readType;
+            // get current time point
+            m_PrevTimePoint = SysTickTimerCore.GetTimePoint();
+            m_NCnt = 0;
 
             // reset internal state of processing command
             m_processingData.seq = 0;
@@ -188,46 +197,47 @@ void CmdProcessing::parseCmdSaveData()
 
 void CmdProcessing::HandleReadOneTimeCmd()
 {
-    uint16_t temp, temp_second;
-
     // Create Start Byte:
-    const uint8_t START_BYTE = (static_cast<uint8_t>(CmdType::CMD_ONEREAD) & 0xF0) |
-                                (static_cast<uint8_t>(m_whichTempRead) & 0x0F);
+    const uint8_t startByte = (static_cast<uint8_t>(CmdType::CMD_ONEREAD) & 0xF0) |
+                               (static_cast<uint8_t>(m_whichTempRead) & 0x0F);
 
+    // Read temperatures from the sensor
+    auto temperatures = ReadTemperatures(m_whichTempRead);
 
-    if ( ReadTempType::READ_AMBIENT == m_whichTempRead )
-    {
-        temp = m_IRTempSensor.readAmbiendTemp();
-    }
-    else if (ReadTempType::READ_OBJECT == m_whichTempRead )
-    {
-        temp = m_IRTempSensor.readObjectTemp();
-    }
-    else if (ReadTempType::READ_BOTH == m_whichTempRead)
-    {
-        temp = m_IRTempSensor.readAmbiendTemp();
-        temp_second = m_IRTempSensor.readObjectTemp();
-    }
+    // Transmit data to the terminal via UART interface
+    SendTemperaturesFrame(startByte, temperatures, m_whichTempRead);
 
-    // Append data to the UART sending buffer
-    m_uartDev.send(START_BYTE);
-    m_uartDev.send(static_cast<uint8_t>(temp));    // transmit low byte first
-    m_uartDev.send(static_cast<uint8_t>(temp>>8)); // transmit high byte as second byte
-
-    // if Both need to send then temp_second is the Object temp.
-    if (ReadTempType::READ_BOTH == m_whichTempRead)
-    {
-        m_uartDev.send(static_cast<uint8_t>(temp_second));    // transmit low byte first
-        m_uartDev.send(static_cast<uint8_t>(temp_second>>8)); // transmit high byte as second byte
-    }
-
-    // disable algorithm
+    // The end - disable an algorithm
     m_currentAlgorithm = nullptr;
 }
 
 
 void CmdProcessing::HandleReadMultipleCmd()
 {
+    auto now = SysTickTimerCore.GetTimePoint();
+
+    // Read data after each MDelay [ms] or all the time with max speed if MDelay is 0 [ms]
+    if ((now - m_PrevTimePoint) >= m_MDelay)
+    {
+        // - store new time point
+        m_PrevTimePoint = now;
+
+        // - read data from the sensor
+        auto temperatures = ReadTemperatures(m_whichTempRead);
+
+        // - - create Start Byte:
+        const uint8_t startByte = (static_cast<uint8_t>(CmdType::CMD_MULTIPLE) & 0xF0) |
+                                   (static_cast<uint8_t>(m_whichTempRead) & 0x0F);
+        // - send temperatures:
+        SendTemperaturesFrame(startByte, temperatures, m_whichTempRead);
+
+        // - keep watching if samples already were sent. If NSamples is 0 then send continuously.
+        ++m_NCnt;
+        if ((m_NSamples < m_NCnt) && (0 < m_NSamples))
+        {   // Already were sent all required samples so everything is done
+            m_currentAlgorithm = nullptr;
+        }
+    }
 }
 
 void CmdProcessing::HandleStopCmd()
@@ -274,7 +284,7 @@ void CmdProcessing::HandleSaveEmissivityCmd()
     m_currentAlgorithm = nullptr;
 }
 
-// PRIVATE - HELPING METHODS:
+// PRIVATE and PROTECTED - HELPING METHODS:
 
 ReadTempType CmdProcessing::parseCmdRecognizeReadType(const uint8_t data)
 {
@@ -289,5 +299,47 @@ ReadTempType CmdProcessing::parseCmdRecognizeReadType(const uint8_t data)
     default :
         // Not recognized data. Do not apply any changes.
         return ReadTempType::NOT_RECOGNIZED;
+    }
+}
+
+
+std::pair<uint16_t, uint16_t> CmdProcessing::ReadTemperatures(const ReadTempType tempType)
+{
+    uint16_t temp, temp_second;
+
+    if ( ReadTempType::READ_AMBIENT == tempType )
+    {
+        temp = m_IRTempSensor.readAmbiendTemp();
+    }
+    else if (ReadTempType::READ_OBJECT == tempType )
+    {
+        temp = m_IRTempSensor.readObjectTemp();
+    }
+    else if (ReadTempType::READ_BOTH == tempType)
+    {
+        temp = m_IRTempSensor.readAmbiendTemp();
+        temp_second = m_IRTempSensor.readObjectTemp();
+    }
+
+    return std::pair<uint16_t, uint16_t>(temp, temp_second);
+}
+
+
+void CmdProcessing::SendTemperaturesFrame(const uint8_t startByte,
+                                          const std::pair<uint16_t, uint16_t> & temperatures,
+                                          const ReadTempType readTempType)
+{
+    // - send the START_BYTE first
+    m_uartDev.send(startByte);
+
+    // transmit the first temperature
+    m_uartDev.send(static_cast<uint8_t>(temperatures.first));    // transmit low byte first
+    m_uartDev.send(static_cast<uint8_t>(temperatures.first>>8)); // transmit high byte as second byte
+
+    // if Both need to send then temp_second is the Object temperature.
+    if (ReadTempType::READ_BOTH == readTempType)
+    {
+        m_uartDev.send(static_cast<uint8_t>(temperatures.second));    // transmit low byte first
+        m_uartDev.send(static_cast<uint8_t>(temperatures.second>>8)); // transmit high byte as second byte
     }
 }
