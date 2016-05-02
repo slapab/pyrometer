@@ -8,7 +8,9 @@
 #ifndef HDR_CMDPROCESSING_H_
 #define HDR_CMDPROCESSING_H_
 
+#include <utility>      // std::move
 #include <cstdint>
+#include <csignal>
 #include "MLX90614Sensor.h"
 
 // FORWARD DECLARATIONS:
@@ -76,7 +78,7 @@ protected:
     // PROTECTED METHODS:
     //void execudeCmd();
     void parseCmd();
-    // parts of parsing command - each method is parsing one specific command
+    // - parts of parsing command - each method is parsing one specific command
     void parseCmdOneRead();
     void parseCmdMultipleRead();
     void parseCmdSaveData();
@@ -88,6 +90,12 @@ protected:
     void HandleStopCmd();
     void HandleAliveCmd();
 
+    // - helper methods
+    std::pair<uint16_t, uint16_t> ReadTemperatures(const ReadTempType readTempType);
+    void SendTemperaturesFrame(const uint8_t startByte,
+                               const std::pair<uint16_t, uint16_t> & temperatures,
+                               const ReadTempType readTempType);
+
     // PROTECTED FIELDS:
 
     UARTCMDInterface &  m_uartDev;
@@ -98,8 +106,10 @@ protected:
 
     // Data for reading commands
     ReadTempType m_whichTempRead;
-    uint16_t     m_NSamples;    // the N value from command frame
-    uint16_t     m_MDelay;      // the M value from command frame
+    uint16_t     m_NSamples;        // the N value from command frame
+    uint16_t     m_MDelay;          // the M value from command frame
+    uint16_t     m_NCnt;            // it is using to count how many times data were sent
+    sig_atomic_t m_PrevTimePoint;   // storing previous time point
 
     // Data for save emissivity command
     uint16_t     m_Emissivity;  // value which need to be write to IR sensor

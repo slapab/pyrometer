@@ -15,9 +15,9 @@ HandleTimer::HandleTimer(const TimerCore & timerCore)
 
 void HandleTimer::Sleep_ms(uint32_t duration)
 {
-    auto currValue = m_TimerCore.getValue();
+    auto currValue = m_TimerCore.GetTimePoint();
 
-    while ((m_TimerCore.getValue() - currValue) <= duration)
+    while ((m_TimerCore.GetTimePoint() - currValue) <= duration)
     {
         __asm__("");
     }
