@@ -182,7 +182,7 @@ void CmdProcessing::parseCmdSaveData()
     m_processingData.paramData[m_processingData.seq] = data;
     ++m_processingData.seq;
 
-    if (2u >= m_processingData.seq)
+    if (2u <= m_processingData.seq)
     {
         // save data to variable
         m_Emissivity = (m_processingData.paramData[1] << 8u) | m_processingData.paramData[0];
