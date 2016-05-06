@@ -2,18 +2,27 @@ import serial
 import binascii
 import time
 import matplotlib.pyplot as plt
+import numpy as np
 
 def updatePlot(x, y, col):
     plt.scatter(x,y, color=col)
     plt.draw()
 
-def initPlot(Nsamples, Mms, ymin, ymax):
-    plt.axis([0, Nsamples*(Mms/1000.0), ymin, ymax])
+def initPlot(Nsamples, Mms, yData, ymin, ymax):
+    xStep = (float(Mms)/1000.0)
+    plt.axis([0, Nsamples*xStep, ymin, ymax]) #Nsamples*(float(Mms)/1000.0)
     plt.ylabel("C degree")
     plt.xlabel("time [s]")
     plt.grid(True)
     plt.ion()
-    plt.show()
+    #ax1=plt.axes()
+    #plt.show()
+    xRange = np.arange(0, Nsamples*xStep, xStep)
+    pltLineOne, pltLineTwo = plt.plot(xRange, yData, '-g', xRange, yData, '-r') #get the line and fill the y value with 0
+
+    #init the values on x axis:
+
+    return [pltLineOne, pltLineTwo]
 
 # Param:
 # bytes - bytes object with data read from UART
@@ -185,19 +194,39 @@ def ActionReadMultiple(uart, whichTemperature, Nsamples, Mdealy, Action):
 Nsamples = 100
 Mms = 300       # in [ms]
 
-initPlot(Nsamples, Mms, 10, 50)
+yData = [0] * Nsamples
+yData2 = [0] * Nsamples
+
+plotLines = initPlot(Nsamples, Mms, yData, -1, 100)
+plotLine = plotLines[0]
+plotLine2 = plotLines[1]
 
 
-uart = serial.Serial('/dev/ttyUSB0', 19200, timeout=5)
+for i in range(Nsamples):
 
-#print (ActionSaveEmissivity(uart, 0.98)) # save emissivity
+    #ymin = float(min(ydata))-10
+    #ymax = float(max(ydata))+10
+    #plt.ylim([ymin,ymax])
+    yData.append(i)
+    yData2.append(i - 3)
+    del(yData[0])
+    del(yData2[0])
+    #plotLine.set_xdata(range(Nsamples))
+    plotLine.set_ydata(yData)  # update the data
+    plotLine2.set_ydata(yData2)
+    plt.draw() # update the plot
+    time.sleep(50.0/1000.0)
 
-
-#print (  ActionReadOneSample(uart, "both") )
-
-ActionReadMultiple(uart, "both", Nsamples, Mms, PlotData)
-
-uart.close()
+# uart = serial.Serial('/dev/ttyUSB0', 19200, timeout=5)
+#
+# #print (ActionSaveEmissivity(uart, 0.98)) # save emissivity
+#
+#
+# #print (  ActionReadOneSample(uart, "both") )
+#
+# ActionReadMultiple(uart, "both", Nsamples, Mms, PlotData)
+#
+# uart.close()
 
 
 
