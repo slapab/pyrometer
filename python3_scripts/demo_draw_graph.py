@@ -26,16 +26,32 @@ class plotingThread( threading.Thread ):
 
     def initPlt(self):
         xStep = (float(self.Mms) / 1000.0)
-        plt.axis([0, self.Nsamples * xStep, self.ymin, self.ymax])  # Nsamples*(float(Mms)/1000.0)
-        plt.ylabel("C degree")
-        plt.xlabel("time [s]")
-        plt.grid(True)
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+
+        # replaceted plt with ax
+        ax.axis([0, self.Nsamples * xStep, self.ymin, self.ymax])  # Nsamples*(float(Mms)/1000.0)
+        ax.set_ylabel("C degree") # plt.ylabel("C degree")
+        ax.set_xlabel("time [s]") #plt.xlabel("time [s]")
+        ax.grid(True)
         plt.ion()
 
+        self.TextValTemp1 = ax.text(1.0, 1.05, '',
+                                    verticalalignment='bottom', horizontalalignment='right',
+                                    transform=ax.transAxes
+                                    )
+        self.TextValTemp2 = ax.text(1.0, 1.0, '',
+                                    verticalalignment='bottom', horizontalalignment='right',
+                                    transform=ax.transAxes
+                                    )
+
         xRange = np.arange(0, self.Nsamples * xStep, xStep)
-        pltLineOne, pltLineTwo = plt.plot(xRange, self.yDataLineOne, '-g',
+        # replaced plt with ax
+        pltLineOne, pltLineTwo = ax.plot(xRange, self.yDataLineOne, '-g',
                                           xRange, self.yDataLineTwo, '-r')  # get the line and fill the y value with 0
         plt.show()
+
 
         # draw the figure so the animations will work
         # fig = plt.gcf()
@@ -46,6 +62,7 @@ class plotingThread( threading.Thread ):
         # self.fig = fig
         self.pltLineOne = pltLineOne
         self.pltLineTwo = pltLineTwo
+        self.axPlot1 = ax
 
     def refreshPlot(self):
         if len(plt.get_fignums()) > 0:
@@ -56,10 +73,6 @@ class plotingThread( threading.Thread ):
             plt.close('all')
 
     def updatePlot(self, dataList):
-        # ymin = float(min(ydata))-10
-        # ymax = float(max(ydata))+10
-        # plt.ylim([ymin,ymax])
-
 
         # plotLine.set_xdata(range(Nsamples))
 
@@ -77,6 +90,13 @@ class plotingThread( threading.Thread ):
             del (self.yDataLineTwo[0])
             self.pltLineTwo.set_ydata(self.yDataLineTwo)
 
+        ymin = float(min(self.yDataLineOne + self.yDataLineTwo))-1
+        ymax = float(max(self.yDataLineOne + self.yDataLineTwo))+1
+        plt.ylim([ymin,ymax])
+
+        # update text on the plot
+        self.TextValTemp1.set_text(round(self.yDataLineOne[-1], 2))
+        self.TextValTemp2.set_text(round(self.yDataLineTwo[-1], 2))
 
         plt.draw()  # update the plot
         self.refreshPlot()
@@ -138,15 +158,16 @@ def toCdeg(bytes):
 
     temp = []
 
-    if size >= 3 and size == 5 :
+    if size == 3:
         temp.append( ((bytes[2] << 8 | bytes[1]) * 0.02) - 273.15 )
-    elif size >= 2 and size == 4:
+    elif size == 2:
         temp.append(((bytes[1] << 8 | bytes[0]) * 0.02) - 273.15)   # case if start byte was omitted
-
-    if size == 5 :
-        temp.append(((bytes[4] << 8 | bytes[3]) * 0.02) - 273.15)
+    elif size == 5 :
+        temp.append(((bytes[2] << 8 | bytes[1]) * 0.02) - 273.15) # first temp
+        temp.append(((bytes[4] << 8 | bytes[3]) * 0.02) - 273.15) # second temp
     elif size == 4 :
-        temp.append(((bytes[3] << 8 | bytes[2]) * 0.02) - 273.15)   # case if start byte was omitted
+        temp.append(((bytes[1] << 8 | bytes[0]) * 0.02) - 273.15) # first temp
+        temp.append(((bytes[3] << 8 | bytes[2]) * 0.02) - 273.15) # case if start byte was omitted
 
     return temp
 
@@ -354,48 +375,58 @@ def ActionReadMultipleMultithread(uart, whichTemp, Nsamples, Mdelay):
 
 
 
-Nsamples = 50
-Mms = 300       # in [ms]
-
-dataQueue = queue.Queue(10) # for passing temp data to the plotting thread
-isPlotThRunning = threading.Event()
-isPlotThRunning.set() # set to True -> plotting thread will be running
-
-#create and start plotting thread:
-plotThread = plotingThread(Queue=dataQueue, Event=isPlotThRunning, Nsamples=Nsamples, Mms=Mms,
-                           ymin=-1, ymax=100)
-plotThread.start()
-for i in range(Nsamples):
-
-    plotdata = [i, i - 3]  # data passing to the plotting thread
-    dataQueue.put(plotdata) # pass data to the plotting thread
-
-    time.sleep(50.0/1000.0)
+Nsamples = 500
+Mms = 100       # in [ms]
 
 
+## example of use plotting thread wit fake data
+# dataQueue = queue.Queue(10) # for passing temp data to the plotting thread
+# isPlotThRunning = threading.Event()
+# isPlotThRunning.set() # set to True -> plotting thread will be running
+#
+# #create and start plotting thread:
+# plotThread = plotingThread(Queue=dataQueue, Event=isPlotThRunning, Nsamples=Nsamples, Mms=Mms,
+#                            ymin=-1, ymax=100)
+# plotThread.start()
+# for i in range(Nsamples):
+#
+#     plotdata = [i, i - 3]  # data passing to the plotting thread
+#     dataQueue.put(plotdata) # pass data to the plotting thread
+#
+#     time.sleep(50.0/1000.0)
+# input("Press Enter to exit ...")
+#
+# isPlotThRunning.clear() # tell plotting thread to finish its job and exit
+#
+# # wait for end of plotting thread
+# plotThread.join()
+
+
+
+## Use uart to communicate with the device
 
 # yData = [0] * Nsamples
 # yData2 = [0] * Nsamples
-# fig, plotLines = initPlot(Nsamples, Mms, yData, -1, 100)
+# # fig, plotLines = initPlot(Nsamples, Mms, yData, -1, 100)
 # plotLine = plotLines[0]
 # plotLine2 = plotLines[1]
-## UART communication
-# uart = serial.Serial('/dev/ttyUSB0', 19200, timeout=5)
-#
-# #print (ActionSaveEmissivity(uart, 0.98)) # save emissivity
-#
-# #print (  ActionReadOneSample(uart, "both") )
-#
+# UART communication
+uart = serial.Serial('/dev/ttyUSB0', 19200, timeout=5)
+
+#print (ActionSaveEmissivity(uart, 0.90)) # save emissivity
+
+#print (  ActionReadOneSample(uart, "both") )
+
 # ActionReadMultiple(uart, "both", Nsamples, Mms, PlotData)
-#
-# uart.close()
+
+# call function to handle multiple temperature samples, it will create plotting thread
+#   and will read data from the device.
+ActionReadMultipleMultithread(uart, "both", Nsamples, Mms)
+
+uart.close()
 
 
 
 
-input("Press Enter to exit ...")
+#input("Press Enter to exit ...")
 
-isPlotThRunning.clear() # tell plotting thread to finish its job and exit
-
-# wait for end of plotting thread
-plotThread.join()
